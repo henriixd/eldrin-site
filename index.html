@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eldrin Online · Open Beta em dezembro</title>
+<meta name="description" content="Eldrin Online, o RPG medieval místico de navegador. Open Beta em dezembro de 2026.">
+<meta property="og:title" content="Eldrin Online · Open Beta em dezembro">
+<meta property="og:description" content="Caçadas, masmorras em grupo e uma Arena decidida no D20. Open Beta em dezembro de 2026.">
+<meta property="og:image" content="https://eldrinonline.com.br/img/logo.webp">
+<meta name="theme-color" content="#07080c">
+<link rel="icon" href="img/icone.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@900&family=Cinzel:wght@600;700&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+<style>
+  :root { --ouro: #f0cf7a; --ouro-escuro: #b8832c; --pergaminho: #e9d6a6; --fundo: #07080c; }
+  * { box-sizing: border-box; }
+  html { background: var(--fundo); }
+  body { margin: 0; min-height: 100%; color: #fff; }
+  body { font-family: "IM Fell English SC", Georgia, serif; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+  .cena { position: fixed; inset: 0; z-index: -2; background: url("img/fundo.webp") center 62% / cover; filter: brightness(.75) saturate(.9); }
+  .cena::after { content: ""; position: absolute; inset: 0;
+    background: radial-gradient(ellipse 70% 60% at 50% 45%, rgba(5,6,10,.15), rgba(5,6,10,.8) 85%), linear-gradient(180deg, rgba(5,6,10,.4), rgba(5,6,10,0) 30%, rgba(5,6,10,.85)); }
+  .brasas { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+  .brasas i { position: absolute; bottom: -10px; border-radius: 50%; background: #ffb24a; box-shadow: 0 0 9px 2px rgba(255,140,40,.8);
+    animation: sobe linear infinite; }
+  @keyframes sobe { from { transform: translate(0, 0); opacity: 0; } 10% { opacity: .9; } to { transform: translate(30px, -110vh); opacity: 0; } }
+  main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+    padding: 48px max(16px, env(safe-area-inset-left)) 32px max(16px, env(safe-area-inset-right)); gap: 18px; }
+  .logo { width: min(560px, 92vw); height: auto; border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.85), 0 0 50px rgba(255,160,50,.18);
+    -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 70%, transparent 100%); mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 70%, transparent 100%); box-shadow: none; }
+  .selo { font-family: Cinzel, Georgia, serif; font-weight: 700; letter-spacing: .4em; color: var(--pergaminho); font-size: clamp(14px, 2.4vw, 20px); margin-top: 6px; text-shadow: 0 2px 10px #000; }
+  h1 { margin: 0; font-family: "Cinzel Decorative", Georgia, serif; font-weight: 900; line-height: 1.05; font-size: clamp(44px, 9vw, 104px); letter-spacing: .02em;
+    background: linear-gradient(180deg, #fff4cf 0%, var(--ouro) 38%, var(--ouro-escuro) 62%, #f3d68d 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 4px 0 #3b2508) drop-shadow(0 0 22px rgba(255,170,60,.45)) drop-shadow(0 8px 24px rgba(0,0,0,.9)); text-wrap: balance; }
+  .data { font-family: Cinzel, Georgia, serif; font-weight: 700; font-size: clamp(22px, 4.4vw, 40px); letter-spacing: .18em; color: #fff2cc;
+    padding: 10px 28px; border: 2px solid rgba(232,201,130,.8); border-radius: 4px; background: rgba(10,8,6,.6); box-shadow: 0 0 30px rgba(255,170,60,.3); }
+  .lema { font-size: clamp(20px, 3.4vw, 30px); max-width: 30ch; margin: 6px 0 0; text-shadow: 0 2px 12px #000; text-wrap: balance; }
+  .herois { display: flex; gap: clamp(8px, 2vw, 18px); justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+  .heroi { width: clamp(72px, 17vw, 150px); text-align: center; }
+  .heroi img { width: 100%; aspect-ratio: 500 / 621; object-fit: cover; object-position: top; display: block; border: 2px solid var(--ouro-escuro);
+    border-radius: 999px 999px 8px 8px; box-shadow: 0 0 0 2px #2a1a06, 0 12px 30px rgba(0,0,0,.8); }
+  .heroi span { display: block; font-family: Cinzel, Georgia, serif; font-weight: 700; color: #f3dfa8; font-size: clamp(12px, 2vw, 18px); margin-top: 8px; text-shadow: 0 2px 6px #000; }
+  .lista { font-family: Cinzel, Georgia, serif; font-weight: 600; color: #e2c98e; font-size: clamp(13px, 2.2vw, 19px); letter-spacing: .06em; margin-top: 10px; text-shadow: 0 2px 8px #000; }
+  .lista span { white-space: nowrap; }
+  .lista b { color: var(--ouro-escuro); margin: 0 .5em; font-size: .7em; vertical-align: middle; }
+  .chamada { font-size: clamp(17px, 2.6vw, 22px); color: var(--pergaminho); margin: 8px 0 0; text-shadow: 0 2px 8px #000; }
+  footer { text-align: center; font-family: Cinzel, Georgia, serif; font-size: 13px; letter-spacing: .1em; color: rgba(233,214,166,.6); padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); }
+  @media (prefers-reduced-motion: reduce) { .brasas { display: none; } }
+</style>
+</head>
+<body>
+<div class="cena"></div>
+<div class="brasas" aria-hidden="true"></div>
+<main>
+  <img class="logo" src="img/logo.webp" alt="Eldrin, RPG narrado, Arena e Glória" width="1024" height="572">
+  <div class="selo">RPG MEDIEVAL MÍSTICO</div>
+  <h1>Open Beta</h1>
+  <div class="data">DEZEMBRO · 2026</div>
+  <p class="lema">Os portões de Eldrin se abrem em dezembro. Escolha sua classe e prepare sua lenda.</p>
+  <div class="herois">
+    <div class="heroi"><img src="img/humano-cavaleiro.webp" alt="Cavaleiro humano"><span>Cavaleiro</span></div>
+    <div class="heroi"><img src="img/elfo-arqueiro-f.webp" alt="Caçadora elfa"><span>Caçador</span></div>
+    <div class="heroi"><img src="img/elfonegro-mago-f.webp" alt="Maga elfa negra"><span>Mago</span></div>
+    <div class="heroi"><img src="img/anao-artesao.webp" alt="Artesão anão"><span>Artesão</span></div>
+  </div>
+  <div class="lista"><span>Caçadas</span> <b>◆</b> <span>Masmorras em grupo</span> <b>◆</b> <span>Arena no D20</span> <b>◆</b> <span>Alianças</span></div>
+  <p class="chamada">Siga o Eldrin Online no Instagram e no Facebook para não perder a abertura.</p>
+</main>
+<footer>© 2026 Eldrin Online</footer>
+<script>
+  // Brasas subindo (só enfeite; some com "reduzir movimento").
+  (function () {
+    var caixa = document.querySelector('.brasas');
+    for (var i = 0; i < 40; i++) {
+      var b = document.createElement('i'), t = 2 + Math.random() * 4;
+      b.style.left = (Math.random() * 100) + '%';
+      b.style.width = b.style.height = t + 'px';
+      b.style.animationDuration = (7 + Math.random() * 9) + 's';
+      b.style.animationDelay = (-Math.random() * 16) + 's';
+      caixa.appendChild(b);
+    }
+  })();
+</script>
+</body>
+</html>
