@@ -85,6 +85,11 @@ input:focus,select:focus{border-color:var(--acc)}
 .send{display:flex;gap:8px;padding:10px;padding-bottom:max(10px,env(safe-area-inset-bottom));background:var(--panel)}
 .send input{border-radius:24px}
 .send .btn{border-radius:50%;width:48px;padding:0;flex:none;display:grid;place-items:center}
+.rec{flex:1;display:flex;align-items:center;gap:10px;background:var(--panel2);border-radius:24px;padding:0 14px;font-weight:800}
+.rec .dot{width:12px;height:12px;border-radius:50%;background:var(--red);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.send .ib{border-radius:50%}
+.m audio{display:block;width:240px;max-width:100%;height:40px;margin:2px 0}
 .welcome{flex:1;display:grid;place-items:center;text-align:center;color:var(--mute);padding:20px}
 .welcome img{width:120px;border-radius:28px;margin-bottom:10px}
 
@@ -172,7 +177,13 @@ input:focus,select:focus{border-color:var(--acc)}
       <button class="ib hide" id="bInfo" title="Info do grupo"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h0"/></svg></button>
     </div>
     <div class="msgs hide" id="msgs"></div>
-    <form class="send hide" id="sendForm"><input id="msgIn" placeholder="Mensagem" autocomplete="off" maxlength="2000"><button class="btn"><svg viewBox="0 0 24 24" width="22" height="22" fill="#06261e"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg></button></form>
+    <form class="send hide" id="sendForm">
+      <input id="msgIn" placeholder="Mensagem" autocomplete="off" maxlength="2000">
+      <div class="rec hide" id="recBar"><span class="dot"></span><span id="recT">0:00</span><span class="small" style="flex:1">Gravando…</span></div>
+      <button type="button" class="ib hide" id="recCancel" title="Cancelar áudio"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
+      <button type="button" class="btn" id="micBtn" title="Gravar áudio"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#06261e" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4"/></svg></button>
+      <button class="btn hide" id="sendBtn"><svg viewBox="0 0 24 24" width="22" height="22" fill="#06261e"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg></button>
+    </form>
   </section>
 </div>
 
@@ -312,6 +323,7 @@ function render() {
         <div class="small" style="color:#e9e2c4">Nome dourado com coroa, áudio HD nas ligações (até 4x mais qualidade, som estéreo e redução de ruído).</div>
         ${me.vip ? '<div class="gold">Você é VIP!</div>' : '<input id="vCode" placeholder="Código VIP" autocapitalize="characters"><button class="btn" id="vGo" style="background:var(--gold);color:#3a2800">Ativar VIP</button>'}
       </div>
+      <button class="btn ghost" id="pBuzz">${buzzOn() ? 'Vibrar sem parar: LIGADO' : 'Vibrar sem parar: DESLIGADO'}</button>
       <button class="btn ghost" id="pNotif">Ativar notificações</button>
       <button class="btn ghost" id="pOut">Sair da conta</button></div>`;
     $('#pSave').onclick = async () => {
@@ -324,6 +336,7 @@ function render() {
       if (error) return toast(error.message.replace(/^.*?: /, ''));
       me.vip = true; renderMe(); render(); toast('Bem-vindo ao VIP!');
     };
+    $('#pBuzz').onclick = () => { try { localStorage.setItem('mc_buzz', buzzOn() ? '0' : '1'); } catch {} render(); };
     $('#pNotif').onclick = async () => { try { const r = await Notification.requestPermission(); toast(r === 'granted' ? 'Notificações ativadas' : 'Notificações bloqueadas'); } catch { toast('Seu navegador não suporta'); } };
     $('#pOut').onclick = async () => { await sb.auth.signOut(); location.reload(); };
   }
@@ -346,6 +359,7 @@ async function openConv(id) {
   $('#cAv').innerHTML = avatar(t, vip, openChat.is_group, 40);
   $('#cName').innerHTML = nameHtml(t, vip);
   $('#cSub').textContent = openChat.is_group ? `${openChat.game || 'Grupo'} · ${openChat.member_count} membros` : '@' + (openChat.other_username || '');
+  if (recorder) { recCancelled = true; recorder.stop(); } $('#msgIn').value = ''; syncBtns();
   show($('#bVoice'), !openChat.is_group); show($('#bVideo'), !openChat.is_group); show($('#bInfo'), openChat.is_group);
   render();
   const { data: mem } = await sb.from('members').select('user_id, profiles(id,username,display_name,vip)').eq('conversation_id', id);
@@ -364,16 +378,47 @@ function addMsg(m) {
   const mine = m.sender_id === me.id, p = profiles[m.sender_id] || {};
   const el = document.createElement('div'); el.className = 'm' + (mine ? ' me' : ''); el.dataset.m = m.id;
   el.innerHTML = (openChat?.is_group && !mine ? `<div class="who">${nameHtml(p.display_name || p.username || 'Alguém', p.vip)}</div>` : '') + `<div class="b"></div><div class="h">${esc(hhmm(m.created_at))}</div>`;
-  el.querySelector('.b').textContent = m.body;
+  const AU = SUPABASE_URL + '/storage/v1/object/public/audios/';
+  if (m.audio_url && m.audio_url.startsWith(AU)) { const a = document.createElement('audio'); a.controls = true; a.preload = 'metadata'; a.src = m.audio_url; el.querySelector('.b').append(a); }
+  else el.querySelector('.b').textContent = m.body;
   const near = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
   box.append(el); if (near || mine) box.scrollTop = 1e9;
 }
+const syncBtns = () => { const rec = !!recorder; const txt = $('#msgIn').value.trim().length > 0; show($('#msgIn'), !rec); show($('#recBar'), rec); show($('#recCancel'), rec); show($('#micBtn'), !rec && !txt); show($('#sendBtn'), rec || txt); };
+$('#msgIn').addEventListener('input', syncBtns);
+let recorder = null, recChunks = [], recStart = 0, recTick, recCancelled = false;
+$('#micBtn').onclick = async () => {
+  if (!openId || recorder) return;
+  let stream; try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); } catch { return toast('Permita o microfone para gravar áudio'); }
+  const type = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/webm'].find(t => window.MediaRecorder?.isTypeSupported?.(t));
+  try { recorder = new MediaRecorder(stream, type ? { mimeType: type, audioBitsPerSecond: me.vip ? 128000 : 48000 } : undefined); } catch { stream.getTracks().forEach(t => t.stop()); return toast('Seu aparelho não grava áudio aqui'); }
+  recChunks = []; recCancelled = false; recStart = Date.now();
+  recorder.ondataavailable = ev => { if (ev.data.size) recChunks.push(ev.data); };
+  recorder.onstop = () => { stream.getTracks().forEach(t => t.stop()); clearInterval(recTick); const conv = openId, mt = recorder.mimeType || type || 'audio/webm'; recorder = null; syncBtns(); if (!recCancelled) sendAudio(new Blob(recChunks, { type: mt }), conv); };
+  recorder.start();
+  const tk = () => { const s = (Date.now() - recStart) / 1000 | 0; $('#recT').textContent = (s / 60 | 0) + ':' + String(s % 60).padStart(2, '0'); if (s >= 180) recorder?.stop(); };
+  tk(); recTick = setInterval(tk, 500); syncBtns();
+};
+$('#recCancel').onclick = () => { if (recorder) { recCancelled = true; recorder.stop(); } };
+async function sendAudio(blob, conv) {
+  if (blob.size < 1500) return toast('Áudio muito curto');
+  const base = blob.type.split(';')[0] || 'audio/webm', ext = base.includes('mp4') ? 'm4a' : base.includes('ogg') ? 'ogg' : 'webm';
+  const path = me.id + '/' + crypto.randomUUID() + '.' + ext;
+  toast('Enviando áudio…');
+  const up = await sb.storage.from('audios').upload(path, blob, { contentType: base });
+  if (up.error) return toast('Não deu pra enviar o áudio');
+  const url = sb.storage.from('audios').getPublicUrl(path).data.publicUrl;
+  const { data, error } = await sb.from('messages').insert({ conversation_id: conv, sender_id: me.id, body: '🎤 Mensagem de voz', audio_url: url }).select().single();
+  if (error) return toast('Não deu pra enviar o áudio');
+  if (conv === openId) addMsg(data); bump(data); render();
+}
 $('#sendForm').onsubmit = async e => {
   e.preventDefault();
+  if (recorder) { recorder.stop(); return; }
   const body = $('#msgIn').value.trim(); if (!body || !openId) return;
-  $('#msgIn').value = '';
+  $('#msgIn').value = ''; syncBtns();
   const { data, error } = await sb.from('messages').insert({ conversation_id: openId, sender_id: me.id, body }).select().single();
-  if (error) { toast('Mensagem não enviada'); $('#msgIn').value = body; return; }
+  if (error) { toast('Mensagem não enviada'); $('#msgIn').value = body; syncBtns(); return; }
   addMsg(data); bump(data);
 };
 function bump(m) {
@@ -390,8 +435,14 @@ async function onMsg(m) {
     unread[m.conversation_id] = (unread[m.conversation_id] || 0) + 1; saveUnread();
     ding();
   }
-  if (m.sender_id !== me.id && document.hidden && window.Notification?.permission === 'granted') {
-    const p = profiles[m.sender_id]; try { new Notification('MyChat — ' + (p?.display_name || 'Nova mensagem'), { body: m.body, icon: 'icon-192.png' }); } catch {}
+  if (m.sender_id !== me.id) {
+    const seen = m.conversation_id === openId && !document.hidden;
+    if (seen) { try { navigator.vibrate(120); } catch {} } else buzzStart();
+    let p = profiles[m.sender_id];
+    if (!p) { const r = await sb.from('profiles').select('*').eq('id', m.sender_id).maybeSingle(); p = r.data; if (p) profiles[p.id] = p; }
+    const title = 'MyChat — ' + (p?.display_name || 'Nova mensagem');
+    if (document.hidden && window.MyChatNative) { try { MyChatNative.notify(title, m.body); } catch {} }
+    else if (document.hidden && window.Notification?.permission === 'granted') { try { new Notification(title, { body: m.body, icon: 'icon-192.png' }); } catch {} }
   }
   render();
 }
@@ -447,6 +498,23 @@ $('#bInfo').onclick = () => {
     await loadChats(); render();
   };
 };
+
+// ---------- vibrar até a pessoa ver ----------
+let buzzT = null;
+const buzzOn = () => { try { return localStorage.getItem('mc_buzz') !== '0'; } catch { return true; } };
+function buzzStart() {
+  if (!buzzOn()) return;
+  if (window.MyChatNative) { try { MyChatNative.vibrateLoop(); } catch {} return; }
+  if (buzzT) return;
+  const go = () => { try { navigator.vibrate([500, 150, 500, 150, 900]); } catch {} };
+  go(); buzzT = setInterval(go, 2600);
+}
+function buzzStop() {
+  clearInterval(buzzT); buzzT = null;
+  try { navigator.vibrate(0); } catch {}
+  if (window.MyChatNative) try { MyChatNative.stop(); } catch {}
+}
+['pointerdown', 'touchstart', 'keydown'].forEach(ev => addEventListener(ev, buzzStop, { capture: true, passive: true }));
 
 // ---------- sons ----------
 let actx; const ac = () => actx || (actx = new (window.AudioContext || window.webkitAudioContext)());
