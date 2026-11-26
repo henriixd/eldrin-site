@@ -19,6 +19,7 @@ const SUPABASE_KEY = "sb_publishable_JDO-pdGC1OH9hvcuxiWSsQ_aHOym4Me";     // a 
 :root{--bg:#0f1230;--panel:#161a40;--panel2:#1d2252;--line:#2a3070;--ink:#eef0ff;--mute:#9aa0d0;--acc:#2fe0b4;--acc2:#14b28a;--gold:#f7c948;--red:#ff5d73;--me:#1f8f74;--them:#252a5e}
 *{box-sizing:border-box;min-width:0}
 html,body{height:100%;margin:0}
+body{height:100dvh}
 body{background:var(--bg);color:var(--ink);font:16px/1.45 Nunito,system-ui,sans-serif;overflow:hidden}
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer;border:0;background:none}
@@ -44,15 +45,15 @@ input:focus,select:focus{border-color:var(--acc)}
 .small{font-size:13px;color:var(--mute)}
 
 /* app */
-#app{height:100%;display:grid;grid-template-columns:minmax(300px,380px) 1fr}
-.side{position:relative;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;height:100%;padding-top:env(safe-area-inset-top)}
+#app{height:100%;display:grid;grid-template-columns:minmax(300px,380px) 1fr;grid-template-rows:minmax(0,1fr)}
+.side{min-height:0;position:relative;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;height:100%;padding-top:env(safe-area-inset-top)}
 .top{display:flex;align-items:center;gap:10px;padding:14px 16px}
 .top .t{font-size:22px;font-weight:900;flex:1}
 .top img{width:34px;height:34px;border-radius:9px}
 .nav{display:flex;gap:4px;padding:0 10px 10px}
 .nav button{flex:1;padding:10px 4px;border-radius:10px;font-weight:800;font-size:14px;color:var(--mute);position:relative}
 .nav button.on{background:var(--panel2);color:var(--acc)}
-.list{flex:1;overflow-y:auto;padding:0 8px 90px}
+.list{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:0 8px 90px}
 .row{display:flex;align-items:center;gap:12px;padding:10px;border-radius:14px;width:100%;text-align:left}
 .row:hover,.row.on{background:var(--panel2)}
 .row .mid{flex:1;overflow:hidden}
@@ -66,7 +67,7 @@ input:focus,select:focus{border-color:var(--acc)}
 .fab{position:absolute;bottom:max(20px,env(safe-area-inset-bottom));right:20px;width:58px;height:58px;border-radius:18px;background:var(--acc);color:#06261e;font-size:30px;font-weight:900;box-shadow:0 8px 24px #0008}
 .empty{text-align:center;color:var(--mute);padding:40px 20px}
 
-.chat{display:flex;flex-direction:column;height:100%;background:radial-gradient(circle at 80% 0,#1c2160,transparent 60%),var(--bg)}
+.chat{min-height:0;display:flex;flex-direction:column;height:100%;background:radial-gradient(circle at 80% 0,#1c2160,transparent 60%),var(--bg)}
 .chead{display:flex;align-items:center;gap:10px;padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top));background:var(--panel);border-bottom:1px solid var(--line)}
 .chead .mid{flex:1;overflow:hidden}
 .chead .nm{font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -74,7 +75,7 @@ input:focus,select:focus{border-color:var(--acc)}
 .ib:hover{background:var(--panel2)}
 .ib svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .back{display:none}
-.msgs{flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:6px}
+.msgs{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:16px 14px;display:flex;flex-direction:column;gap:6px}
 .m{max-width:78%;padding:8px 12px 6px;border-radius:16px;background:var(--them);align-self:flex-start;word-wrap:break-word;white-space:pre-wrap}
 .m.me{background:var(--me);align-self:flex-end;border-bottom-right-radius:4px}
 .m:not(.me){border-bottom-left-radius:4px}
@@ -89,7 +90,7 @@ input:focus,select:focus{border-color:var(--acc)}
 
 /* modais */
 .modal{position:fixed;inset:0;background:#05061acc;display:grid;place-items:center;padding:16px;z-index:20}
-.modal .card{max-height:90vh;overflow-y:auto}
+.modal .card{max-height:85dvh;overflow-y:auto;overscroll-behavior:contain}
 .modal h3{margin:0;font-size:20px}
 .pick{display:flex;align-items:center;gap:10px;padding:8px;border-radius:12px;background:var(--panel2)}
 .pick input{width:22px;height:22px}
