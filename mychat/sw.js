@@ -1,5 +1,5 @@
 // MyChat — service worker simples (permite instalar como app)
-const C = 'mychat-v3';
+const C = 'mychat-v4';
 self.addEventListener('install', e => { e.waitUntil(caches.open(C).then(c => c.addAll(['./', 'index.html', 'icon-192.png', 'icon-512.png', 'manifest.json']))); self.skipWaiting(); });
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', e => {

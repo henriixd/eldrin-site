@@ -89,6 +89,9 @@ input:focus,select:focus{border-color:var(--acc)}
 .rec .dot{width:12px;height:12px;border-radius:50%;background:var(--red);animation:pulse 1s infinite}
 @keyframes pulse{50%{opacity:.25}}
 .send .ib{border-radius:50%}
+.m img.ph{display:block;max-width:240px;max-height:320px;width:100%;border-radius:12px;margin:2px 0;cursor:zoom-in;background:#0003}
+.viewer{position:fixed;inset:0;z-index:60;background:#000e;display:grid;place-items:center;padding:12px}
+.viewer img{max-width:100%;max-height:100%;border-radius:8px}
 .m audio{display:block;width:240px;max-width:100%;height:40px;margin:2px 0}
 .welcome{flex:1;display:grid;place-items:center;text-align:center;color:var(--mute);padding:20px}
 .welcome img{width:120px;border-radius:28px;margin-bottom:10px}
@@ -178,6 +181,7 @@ input:focus,select:focus{border-color:var(--acc)}
     </div>
     <div class="msgs hide" id="msgs"></div>
     <form class="send hide" id="sendForm">
+      <label class="ib" id="photoBtn" title="Enviar foto"><input type="file" accept="image/*" id="photoIn" hidden><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="3"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8 5l1.5-2h5L16 5"/></svg></label>
       <input id="msgIn" placeholder="Mensagem" autocomplete="off" maxlength="2000">
       <div class="rec hide" id="recBar"><span class="dot"></span><span id="recT">0:00</span><span class="small" style="flex:1">Gravando…</span></div>
       <button type="button" class="ib hide" id="recCancel" title="Cancelar áudio"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
@@ -379,17 +383,19 @@ function addMsg(m) {
   const el = document.createElement('div'); el.className = 'm' + (mine ? ' me' : ''); el.dataset.m = m.id;
   el.innerHTML = (openChat?.is_group && !mine ? `<div class="who">${nameHtml(p.display_name || p.username || 'Alguém', p.vip)}</div>` : '') + `<div class="b"></div><div class="h">${esc(hhmm(m.created_at))}</div>`;
   const AU = SUPABASE_URL + '/storage/v1/object/public/audios/';
-  if (m.audio_url && m.audio_url.startsWith(AU)) { const a = document.createElement('audio'); a.controls = true; a.preload = 'metadata'; a.src = m.audio_url; el.querySelector('.b').append(a); }
+  const FU = SUPABASE_URL + '/storage/v1/object/public/fotos/';
+  if (m.image_url && m.image_url.startsWith(FU)) { const im = document.createElement('img'); im.className = 'ph'; im.loading = 'lazy'; im.alt = 'Foto'; im.src = m.image_url; im.onload = () => { const b = $('#msgs'); if (b.scrollHeight - b.scrollTop - b.clientHeight < 400) b.scrollTop = 1e9; }; im.onclick = () => { const v = document.createElement('div'); v.className = 'viewer'; const big = document.createElement('img'); big.src = m.image_url; v.append(big); v.onclick = () => v.remove(); document.body.append(v); }; el.querySelector('.b').append(im); }
+  else if (m.audio_url && m.audio_url.startsWith(AU)) { const a = document.createElement('audio'); a.controls = true; a.preload = 'metadata'; a.src = m.audio_url; el.querySelector('.b').append(a); }
   else el.querySelector('.b').textContent = m.body;
   const near = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
   box.append(el); if (near || mine) box.scrollTop = 1e9;
 }
-const syncBtns = () => { const rec = !!recorder; const txt = $('#msgIn').value.trim().length > 0; show($('#msgIn'), !rec); show($('#recBar'), rec); show($('#recCancel'), rec); show($('#micBtn'), !rec && !txt); show($('#sendBtn'), rec || txt); };
+const syncBtns = () => { const rec = !!recorder; const txt = $('#msgIn').value.trim().length > 0; show($('#msgIn'), !rec); show($('#photoBtn'), !rec); show($('#recBar'), rec); show($('#recCancel'), rec); show($('#micBtn'), !rec && !txt); show($('#sendBtn'), rec || txt); };
 $('#msgIn').addEventListener('input', syncBtns);
 let recorder = null, recChunks = [], recStart = 0, recTick, recCancelled = false;
 $('#micBtn').onclick = async () => {
   if (!openId || recorder) return;
-  let stream; try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); } catch { return toast('Permita o microfone para gravar áudio'); }
+  let stream; try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { return toast(micHelp(e)); }
   const type = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/webm'].find(t => window.MediaRecorder?.isTypeSupported?.(t));
   try { recorder = new MediaRecorder(stream, type ? { mimeType: type, audioBitsPerSecond: me.vip ? 128000 : 48000 } : undefined); } catch { stream.getTracks().forEach(t => t.stop()); return toast('Seu aparelho não grava áudio aqui'); }
   recChunks = []; recCancelled = false; recStart = Date.now();
@@ -400,6 +406,31 @@ $('#micBtn').onclick = async () => {
   tk(); recTick = setInterval(tk, 500); syncBtns();
 };
 $('#recCancel').onclick = () => { if (recorder) { recCancelled = true; recorder.stop(); } };
+$('#photoIn').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f || !openId) return;
+  const conv = openId;
+  toast('Enviando foto…');
+  let blob;
+  try { blob = await shrink(f); } catch { return toast('Não deu pra abrir essa imagem'); }
+  const path = me.id + '/' + crypto.randomUUID() + '.jpg';
+  const up = await sb.storage.from('fotos').upload(path, blob, { contentType: 'image/jpeg' });
+  if (up.error) return toast('Não deu pra enviar a foto');
+  const url = sb.storage.from('fotos').getPublicUrl(path).data.publicUrl;
+  const { data, error } = await sb.from('messages').insert({ conversation_id: conv, sender_id: me.id, body: '📷 Foto', image_url: url }).select().single();
+  if (error) return toast('Não deu pra enviar a foto');
+  if (conv === openId) addMsg(data); bump(data); render();
+};
+async function shrink(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url; });
+    const max = 1600, k = Math.min(1, max / Math.max(img.width, img.height));
+    const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return await new Promise((ok, no) => c.toBlob(b => b ? ok(b) : no(), 'image/jpeg', 0.82));
+  } finally { URL.revokeObjectURL(url); }
+}
 async function sendAudio(blob, conv) {
   if (blob.size < 1500) return toast('Áudio muito curto');
   const base = blob.type.split(';')[0] || 'audio/webm', ext = base.includes('mp4') ? 'm4a' : base.includes('ogg') ? 'ogg' : 'webm';
@@ -545,9 +576,24 @@ function hdSdp(sdp) {
   });
 }
 const tuneSdp = d => ({ type: d.type, sdp: me.vip ? hdSdp(d.sdp) : d.sdp });
-async function getMedia(video) {
-  const audio = me.vip ? { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000, channelCount: 2 } : { echoCancellation: true, noiseSuppression: true };
-  return navigator.mediaDevices.getUserMedia({ audio, video: video ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } : false });
+function micHelp(err) {
+  const n = err && err.name;
+  if (n === 'NotAllowedError' || n === 'SecurityError') return 'O microfone está bloqueado. No PC: clique no cadeado ao lado do endereço → Microfone → Permitir, e recarregue a página.';
+  if (n === 'NotFoundError' || n === 'OverconstrainedError') return 'Nenhum microfone encontrado. Confira se ele está ligado e escolhido no Windows (Configurações → Som → Entrada).';
+  if (n === 'NotReadableError' || n === 'AbortError') return 'O microfone está sendo usado por outro programa (Discord, Zoom…). Feche o outro programa e tente de novo.';
+  return 'Não consegui usar o microfone.';
+}
+async function getMedia(video, quiet) {
+  const md = navigator.mediaDevices;
+  if (!md?.getUserMedia) { if (!quiet) toast('Abra o MyChat no Chrome ou Edge para usar o microfone'); return null; }
+  const v = video ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } : false;
+  const fancy = me.vip ? { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000, channelCount: 2 } : { echoCancellation: true, noiseSuppression: true };
+  const tries = [{ audio: fancy, video: v }, { audio: true, video: v }];
+  if (video) tries.push({ audio: true, video: false }, { audio: false, video: true });
+  let last;
+  for (const c of tries) { try { return await md.getUserMedia(c); } catch (e) { last = e; if (e.name === 'NotAllowedError' || e.name === 'SecurityError') break; } }
+  if (!quiet) toast(micHelp(last) + ' Você vai entrar só ouvindo.');
+  return null;
 }
 function setBitrate() {
   pc.getSenders().forEach(s => {
@@ -569,7 +615,9 @@ function newPc(other) {
     if (pc?.connectionState === 'connected') connected();
     if (['failed', 'disconnected'].includes(pc?.connectionState)) { $('#kSt').textContent = 'Conexão instável…'; if (pc.connectionState === 'failed') hangup(true); }
   };
-  local.getTracks().forEach(t => pc.addTrack(t, local));
+  if (local) local.getTracks().forEach(t => pc.addTrack(t, local));
+  if (!local || !local.getAudioTracks().length) pc.addTransceiver('audio', { direction: 'recvonly' });
+  if (call.video && (!local || !local.getVideoTracks().length)) pc.addTransceiver('video', { direction: 'recvonly' });
 }
 function callScreen(p, status, btns, video) {
   $('#kAv').innerHTML = avatar(p.display_name || p.username, p.vip); $('#kName').innerHTML = nameHtml(p.display_name || p.username, p.vip);
@@ -594,7 +642,7 @@ function connected() {
 async function startCall(video) {
   if (call) return;
   const other = openChat.other_id, p = profiles[other] || { display_name: openChat.other_display, username: openChat.other_username, vip: openChat.other_vip };
-  try { local = await getMedia(video); } catch { return toast('Permita o microfone' + (video ? ' e a câmera' : '') + ' para ligar'); }
+  local = await getMedia(video);
   call = { id: crypto.randomUUID(), other, video, out: true };
   callScreen(p, 'Chamando…', inCallBtns(video), video); bindInCall(); ring(true);
   newPc(other);
@@ -632,7 +680,7 @@ async function onSig(s) {
 function flushIce() { pendingIce.forEach(c => pc.addIceCandidate(c).catch(() => {})); pendingIce = []; }
 async function accept(p) {
   ring(false);
-  try { local = await getMedia(call.video); } catch { toast('Permita o microfone para atender'); sendTo(call.other, { t: 'reject', id: call.id }); return endLocal(); }
+  local = await getMedia(call.video);
   callScreen(p, 'Conectando…', inCallBtns(call.video), call.video); bindInCall();
   newPc(call.other);
   await pc.setRemoteDescription(call.offer); flushIce();

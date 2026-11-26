@@ -16,6 +16,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -26,6 +27,7 @@ public class MainActivity extends Activity {
     static final String URL = "https://henriixd.github.io/eldrin-site/mychat/";
     WebView web;
     PermissionRequest pending;
+    ValueCallback<Uri[]> fileCb;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -48,6 +50,20 @@ public class MainActivity extends Activity {
             }
         });
         web.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> cb, FileChooserParams params) {
+                if (fileCb != null) fileCb.onReceiveValue(null);
+                fileCb = cb;
+                try {
+                    Intent pick = params.createIntent();
+                    startActivityForResult(Intent.createChooser(pick, "Escolher foto"), 7);
+                } catch (Exception e) {
+                    fileCb = null;
+                    return false;
+                }
+                return true;
+            }
+
             @Override
             public void onPermissionRequest(final PermissionRequest r) {
                 runOnUiThread(() -> {
@@ -107,6 +123,15 @@ public class MainActivity extends Activity {
         for (int g : results) if (g == PackageManager.PERMISSION_GRANTED) any = true;
         if (any) pending.grant(pending.getResources()); else pending.deny();
         pending = null;
+    }
+
+    @Override
+    protected void onActivityResult(int code, int result, Intent data) {
+        super.onActivityResult(code, result, data);
+        if (code == 7 && fileCb != null) {
+            fileCb.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(result, data));
+            fileCb = null;
+        }
     }
 
     @Override
